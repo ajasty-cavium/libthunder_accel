@@ -22,6 +22,7 @@ void *memcpy(void *dest, const void *src, size_t len)
   return memcpy_c(dest, src, len);
 #else
 #if defined(AARCH64)
+  return memcpy_repe(dest, src, len);
 #elif defined(X64)
   return memcpy_repe(dest, src, len);
 #endif

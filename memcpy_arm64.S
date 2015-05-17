@@ -22,9 +22,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/linkage.h>
-#include <asm/assembler.h>
-#include <asm/cache.h>
+	.global memcpy_repe
 
 /*
  * Copy a buffer from src to dest (alignment handled by the hardware)
@@ -56,7 +54,7 @@ C_h	.req	x12
 D_l	.req	x13
 D_h	.req	x14
 
-ENTRY(memcpy)
+memcpy_repe:
 	mov	dst, dstin
 	cmp	count, #16
 	/*When memory length is less than 16, the accessed are not aligned.*/
@@ -168,7 +166,7 @@ ENTRY(memcpy)
 	* Critical loop.  Start at a new cache line boundary.  Assuming
 	* 64 bytes per line this ensures the entire loop is in one line.
 	*/
-	.p2align	L1_CACHE_SHIFT
+	.p2align	6
 .Lcpy_body_large:
 	/* pre-get 64 bytes data. */
 	ldp	A_l, A_h, [src],#16
@@ -198,4 +196,3 @@ ENTRY(memcpy)
 	tst	count, #0x3f
 	b.ne	.Ltail63
 	ret
-ENDPROC(memcpy)

@@ -2,7 +2,8 @@
 #include <string.h>
 #include <stdio.h>
 
-#define BUFLEN (4096*1024)
+#define BUFLEN (4096<<4)
+#define NRUNS (200000)
 
 extern void accel_announce(void);
 extern void *memcpy_d(void *, const void *, size_t);
@@ -36,12 +37,12 @@ int main(int argc, char **argv)
 {
   //xaccel_announce();
   int i;
-  for (i = 0; i < 2000; i++) {
+  for (i = 0; i < NRUNS; i++) {
   clrbuf(destbuf);
     setbufv(srcbuf, 1);
     cpybuf(srcbuf, destbuf);
     if(cmpbuf(srcbuf, destbuf)) {
-	printf("ERROR: copy failed.\n");
+	printf("ERROR: copy failed %hhx %hhx.\n", destbuf[0], srcbuf[0]);
     }
   }
     //printf("copy succeeded.\n");
