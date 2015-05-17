@@ -27,11 +27,9 @@ LIBTHUNDER_SRCS = thunder_accel.c $(MEMCPY_S)
 all: libthunder_accel.so test
 
 test: test.o
-	#libtool --mode=link gcc $(CFLAGS) -o $@ $< libthunder_accel.la
 	$(CC) $(CFLAGS) -o $@ $<
 
 test.o: test.c
-	#libtool --mode=compile $(CC) $(CFLAGS) -c $< -o $@
 	$(CC) $(CFLAGS) -c $< -o $@
 
 libthunder_accel.so: libthunder_accel.a
@@ -40,7 +38,6 @@ libthunder_accel.so: libthunder_accel.a
 libthunder_accel.a: $(LIBTHUNDER_OBJS)
 	$(AR) cru libthunder_accel.a $(LIBTHUNDER_OBJS)
 	$(RANLIB) libthunder_accel.a
-	#libtool --mode=link gcc -g -export-dynamic $(LDFLAGS)  -O0 -o libthunder_accel.la $(LIBTHUNDER_LOBJS) -rpath /usr/local/lib
 
 thunder_accel.o: thunder_accel.c
 	$(CC) $(CFLAGS) -c $< -o $@
