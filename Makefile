@@ -1,5 +1,6 @@
 
-ARCH=AARCH64
+#ARCH=AARCH64
+ARCH=X64
 
 CC=gcc
 AR=ar
