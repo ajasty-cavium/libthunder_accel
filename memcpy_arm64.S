@@ -168,9 +168,15 @@ memcpy_repe:
 	*/
 	.p2align	6
 .Lcpy_body_large:
+	mov 	D_l, src
+	and	D_h, count, #0x380	/* Limit to 7 cachelines prefetch */
+	add	D_h, D_h, src 		/* End offset */
+4:
+	prfm	pldl1strm, [D_l]
+	add	D_l, D_l, #128
+	cmp	D_l, D_h
+	b.lt 	4b
 	/* pre-get 64 bytes data. */
-	prfm 	pldl1strm,[src,128]
-	prfm 	pstl1strm,[dst,128]
 	ldp	A_l, A_h, [src],#16
 	ldp	B_l, B_h, [src],#16
 	ldp	C_l, C_h, [src],#16
@@ -180,8 +186,8 @@ memcpy_repe:
 	* interlace the load of next 64 bytes data block with store of the last
 	* loaded 64 bytes data.
 	*/
-	prfm 	pldl1strm,[src,256]
-	prfm 	pstl1strm,[dst,256]
+	prfm 	pldl1strm,[src,512]
+
 	stp	A_l, A_h, [dst],#16
 	ldp	A_l, A_h, [src],#16
 	stp	B_l, B_h, [dst],#16
