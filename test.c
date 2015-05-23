@@ -2,18 +2,23 @@
 #include <string.h>
 #include <stdio.h>
 
-#define BUFLEN (4096<<4)
-#define NRUNS (200000)
+//#define BUFLEN (4096<<6)
+//#define BUFLEN (4096<<4)
+//#define BUFLEN (1 << 17)
+//#define BUFLEN (1<<10)
+#define BUFLEN (1<<9)
+#define NRUNS (1)
+#define CACHECLR (1<<26)
 
-#define MEMCLR 0
-#define MEMSET 0
+#define MEMCLR 1
+#define MEMSET 1
 #define MEMCPY 1
-#define MEMCMP 0
+#define MEMCMP 1
 
 extern void accel_announce(void);
 extern void *memcpy_d(void *, const void *, size_t);
 
-char destbuf[BUFLEN], srcbuf[BUFLEN];
+char *destbuf, *srcbuf, *clrbuf;
 
 unsigned long long get_ticks(void)
 {
@@ -38,11 +43,6 @@ void setbufv(char *t, int v)
   memset(t, v, BUFLEN);
 }
 
-void clrbuf(char *t)
-{
-    setbufv(t, 0);
-}
-
 void cpybuf(const char *src, char *dest)
 {
   memcpy(dest, src, BUFLEN);
@@ -53,29 +53,48 @@ int cmpbuf(const char *src, const char *dest)
     return memcmp(src, dest, BUFLEN);
 }
 
-int main(int argc, char **argv)
+int runtest(int len)
 {
   int i;
-  unsigned long long tv = get_ticks(), total = 0;
-  for (i = 0; i < NRUNS; i++) {
+  unsigned long long tv = get_ticks(), total = 0, tv2, total2 = 0;
+  //for (i = 0; i < runs; i++) {
 #if MEMCLR
-  clrbuf(destbuf);
+  memset(destbuf, 0, len);
 #endif
 #if MEMSET
-    setbufv(srcbuf, 1);
+    memset(srcbuf, 1, len);
 #endif
+  memset(clrbuf, 0, CACHECLR);
 #if MEMCPY
     tv = get_ticks();
-    cpybuf(srcbuf, destbuf);
+    memcpy(srcbuf, destbuf, len);
     total += ticks_since(tv);
 #endif
+  memset(clrbuf, 0, CACHECLR);
+
 #if MEMCMP
-    if(cmpbuf(srcbuf, destbuf)) {
+    tv2 = get_ticks();
+    if(memcmp(srcbuf, destbuf, len)) {
 	printf("ERROR: copy failed %hhx %hhx.\n", destbuf[0], srcbuf[0]);
     }
+    total2 += ticks_since(tv2);
 #endif
 
-  }
-  printf("ticks total: %llu.\n", total);
+ // }
+  printf("ticks total: %llu %llu.\n", total, total2);
+  return 0;
+}
+
+int main(int argc, void **argv)
+{
+  int v = BUFLEN;
+
+  if (argc == 2) v = atoi(argv[1]);
+
+  srcbuf = malloc(v);
+  destbuf = malloc(v);
+  clrbuf = malloc(CACHECLR);
+
+  return runtest(v);
 }
 

@@ -164,18 +164,19 @@ memcpy_repe:
 
 	/*
 	* Critical loop.  Start at a new cache line boundary.  Assuming
-	* 64 bytes per line this ensures the entire loop is in one line.
 	*/
 	.p2align	6
 .Lcpy_body_large:
 	mov 	D_l, src
-	and	D_h, count, #0x380	/* Limit to 7 cachelines prefetch */
-	add	D_h, D_h, src 		/* End offset */
+	lsr	D_h, count, #7
+	cmp 	D_h, #0
+	b.lt	4f
+	mov	D_h, #4
 4:
-	prfm	pldl1strm, [D_l]
+	prfm	pldl1strm,[D_l, 128]
 	add	D_l, D_l, #128
-	cmp	D_l, D_h
-	b.lt 	4b
+	sub	D_h, D_h, #1
+	cbnz	D_h, 4b
 	/* pre-get 64 bytes data. */
 	ldp	A_l, A_h, [src],#16
 	ldp	B_l, B_h, [src],#16
@@ -186,7 +187,9 @@ memcpy_repe:
 	* interlace the load of next 64 bytes data block with store of the last
 	* loaded 64 bytes data.
 	*/
+	tbz	src, #6, 2f
 	prfm 	pldl1strm,[src,512]
+2:
 
 	stp	A_l, A_h, [dst],#16
 	ldp	A_l, A_h, [src],#16

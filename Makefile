@@ -15,15 +15,17 @@ ifeq ($(ARCH),AARCH64)
 	CDEFS=-DAARCH64
 	MEMCPY_O=memcpy_arm64.o
 	MEMCPY_S=memcpy_arm64.S
+	MEMCMP_O=memcmp_arm64.o
+	MEMCMP_S=memcmp_arm64.S
 endif
 endif
 
-CFLAGS=-fPIC -ggdb -O0 $(CDEFS)
+CFLAGS=-fPIC -ggdb -O3 $(CDEFS) -flto
 LDFLAGS=-shared  -fPIC -ggdb -O0 -rdynamic 
 
-LIBTHUNDER_OBJS = thunder_accel.o $(MEMCPY_O)
+LIBTHUNDER_OBJS = thunder_accel.o $(MEMCPY_O) $(MEMCMP_O)
 LIBTHUNDER_LOBJS = memcpy_64.lo thunder_accel.lo
-LIBTHUNDER_SRCS = thunder_accel.c $(MEMCPY_S)
+LIBTHUNDER_SRCS = thunder_accel.c $(MEMCPY_S) $(MEMCMP_S)
 
 all: libthunder_accel.so test
 
@@ -51,4 +53,5 @@ clean:
 	rm -rf .libs
 
 run: all
-	LD_PRELOAD=/home/bill/src/libthunder_accel/libthunder_accel.so ./test
+	LD_PRELOAD=/home/bill/src/libthunder_accel/libthunder_accel.so ./test $(BUFLEN)
+	./test $(BUFLEN)
