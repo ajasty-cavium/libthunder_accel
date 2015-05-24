@@ -17,15 +17,23 @@ ifeq ($(ARCH),AARCH64)
 	MEMCPY_S=memcpy_arm64.S
 	MEMCMP_O=memcmp_arm64.o
 	MEMCMP_S=memcmp_arm64.S
+
+	STRCPY_O=strcpy_arm64.o
+	STRCPY_S=strcpy_arm64.S
+	STRCMP_O=strcmp_arm64.o
+	STRCMP_S=strcmp_arm64.S
+
+	ACCEL_O=$(MEMCPY_O) $(MEMCMP_O) $(STRCPY_O) $(STRCMP_O)
+	ACCEL_S=$(MEMCPY_S) $(MEMCMP_S) $(STRCPY_S) $(STRCMP_S)
 endif
 endif
 
 CFLAGS=-fPIC -ggdb -O3 $(CDEFS) -flto
 LDFLAGS=-shared  -fPIC -ggdb -O0 -rdynamic 
 
-LIBTHUNDER_OBJS = thunder_accel.o $(MEMCPY_O) $(MEMCMP_O)
+LIBTHUNDER_OBJS = thunder_accel.o $(ACCEL_O)
 LIBTHUNDER_LOBJS = memcpy_64.lo thunder_accel.lo
-LIBTHUNDER_SRCS = thunder_accel.c $(MEMCPY_S) $(MEMCMP_S)
+LIBTHUNDER_SRCS = thunder_accel.c $(ACCEL_S)
 
 all: libthunder_accel.so test
 

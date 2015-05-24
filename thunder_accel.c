@@ -14,6 +14,9 @@ extern void *memcpy_s(void *dest, const void *src, size_t len);
 extern void *memcpy_rep(void *dest, const void *src, size_t len);
 extern void *memcpy_repe(void *dest, const void *src, size_t len);
 int memcmp_s(const void *s1, const void *s2, size_t len);
+
+
+
 extern void accel_announce(void);
 
 void *memcpy(void *dest, const void *src, size_t len)
