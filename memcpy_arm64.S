@@ -22,7 +22,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-	.global memcpy_repe
+	.global memcpy_s
 
 /*
  * Copy a buffer from src to dest (alignment handled by the hardware)
@@ -54,7 +54,8 @@ C_h	.req	x12
 D_l	.req	x13
 D_h	.req	x14
 
-memcpy_repe:
+memcpy_s:
+	prfm	pldl1strm,[src]
 	mov	dst, dstin
 	cmp	count, #16
 	/*When memory length is less than 16, the accessed are not aligned.*/
@@ -165,7 +166,7 @@ memcpy_repe:
 	/*
 	* Critical loop.  Start at a new cache line boundary.  Assuming
 	*/
-	.p2align	6
+	.p2align	7
 .Lcpy_body_large:
 	mov 	D_l, src
 	lsr	D_h, count, #7

@@ -60,6 +60,8 @@ memcmp_s:
 	prfm	pldl1strm, [src2]
 	prfm	pldl1strm, [src1, 128]
 	prfm	pldl1strm, [src2, 128]
+	prfm	pldl1strm, [src1, 256]
+	prfm	pldl1strm, [src2, 256]
 	
 	cbz	limit, L(ret0)
 	eor	tmp1, src1, src2
@@ -69,22 +71,23 @@ memcmp_s:
 	b.ne	L(mutual_align)
 	add	limit_wd, limit, #7
 	lsr	limit_wd, limit_wd, #3
-	/* Start of performance-critical section  -- one 64B cache line.  */
+/* Start of performance-critical section  -- one 64B cache line.  */
+	.p2align 7
 L(prefetch):
-	prfm	pldl1strm, [src1, 256]
-	prfm	pldl1strm, [src2, 256]
-	b	L(no_prefetch)
+	prfm	pldl1strm, [src1, 384]
+	prfm	pldl1strm, [src2, 384]
+	b 	L(no_prefetch)
+
 L(loop_aligned):
 	ands	data1, src1, #127
 	b.eq	L(prefetch)
+
 L(no_prefetch):
 	ldr	data1, [src1], #8
 	ldr	data2, [src2], #8
 	
 L(start_realigned):
 	subs	limit_wd, limit_wd, #1
-	/*prfm	pldl1strm, [src1, 256]
-	prfm	pldl1strm, [src2, 256]*/
 	eor	diff, data1, data2	/* Non-zero if differences found.  */
 	csinv	endloop, diff, xzr, ne	/* Last Dword or differences.  */
 	cbz	endloop, L(loop_aligned)

@@ -54,6 +54,8 @@ strcmp_s:
 	mov	w0, w0
 	mov	w1, w1
 #endif
+	prfm	pldl1strm, [src1]
+	prfm	pldl1strm, [src2]
 	eor	tmp1, src1, src2
 	mov	zeroones, #REP8_01
 	tst	tmp1, #7
@@ -63,6 +65,7 @@ strcmp_s:
 	/* NUL detection works on the principle that (X - 1) & (~X) & 0x80
 	   (=> (X - 1) & ~(X | 0x7f)) is non-zero iff a byte is zero, and
 	   can be done in parallel across the entire word.  */
+	.p2align	7
 L(loop_aligned):
 	ldr	data1, [src1], #8
 	ldr	data2, [src2], #8

@@ -1,4 +1,6 @@
 #define _GNU_SOURCE
+#define _HAVE_STRING_ARCH_strcmp
+
 #include <stdio.h>
 #include <string.h>
 #include <dlfcn.h>
@@ -11,11 +13,11 @@ void *(*memcpy_c)(void *, const void *, size_t);
 int (*memcmp_c)(const void *, const const void *, size_t);
 
 extern void *memcpy_s(void *dest, const void *src, size_t len);
-extern void *memcpy_rep(void *dest, const void *src, size_t len);
-extern void *memcpy_repe(void *dest, const void *src, size_t len);
 int memcmp_s(const void *s1, const void *s2, size_t len);
 
-
+char *strcpy_s(char *dest, const char *src);
+int strcmp_s(const char *s1, const char *s2);
+size_t strlen(const char *s);
 
 extern void accel_announce(void);
 
@@ -33,9 +35,9 @@ void *memcpy(void *dest, const void *src, size_t len)
   }
 #endif
 #if defined(AARCH64)
-  return memcpy_repe(dest, src, len);
+  return memcpy_s(dest, src, len);
 #elif defined(X64)
-  return memcpy_repe(dest, src, len);
+  return memcpy_s(dest, src, len);
 #endif
 }
 
@@ -53,6 +55,21 @@ int memcmp(const void *s1, const void *s2, size_t len)
   }
 #endif
  return memcmp_s(s1, s2, len);
+}
+
+char *strcpy(char *dest, const char *src)
+{
+  return strcpy_s(dest, src);
+}
+
+int strcmp(const char *s1, const char *s2)
+{
+  return strcmp_s(s1, s2);
+}
+
+size_t strlen(const char *s)
+{
+    return strlen_s(s);
 }
 
 void accel_announce()

@@ -7,13 +7,28 @@
 //#define BUFLEN (1 << 17)
 //#define BUFLEN (1<<10)
 #define BUFLEN (1<<9)
-#define NRUNS (1)
+#define NRUNS (1<<4)
 #define CACHECLR (1<<26)
 
+#ifndef MEMCLR
 #define MEMCLR 1
+#endif
+#ifndef MEMSET
 #define MEMSET 1
+#endif
+#ifndef MEMCPY
 #define MEMCPY 1
+#endif
+#ifndef MEMCMP
 #define MEMCMP 1
+#endif
+#ifndef STRCPY
+#define STRCPY 1
+#endif
+#ifndef STRCMP
+#define STRCMP 1
+#endif
+
 
 extern void accel_announce(void);
 extern void *memcpy_d(void *, const void *, size_t);
@@ -55,33 +70,65 @@ int cmpbuf(const char *src, const char *dest)
 
 int runtest(int len)
 {
-  int i;
-  unsigned long long tv = get_ticks(), total = 0, tv2, total2 = 0;
-  //for (i = 0; i < runs; i++) {
+  int i, runs = NRUNS;
+  unsigned long long tv;
+  unsigned long long memcpy_total = 0, memcmp_total = 0;
+  unsigned long long strcpy_total = 0, strcmp_total = 0;
+  for (i = 0; i < runs; i++) {
+    memset(clrbuf, 0, CACHECLR);
 #if MEMCLR
-  memset(destbuf, 0, len);
+    memset(destbuf, 0, len);
+    memset(clrbuf, 0, CACHECLR);
 #endif
 #if MEMSET
     memset(srcbuf, 1, len);
+    memset(clrbuf, 0, CACHECLR);
 #endif
-  memset(clrbuf, 0, CACHECLR);
 #if MEMCPY
     tv = get_ticks();
     memcpy(srcbuf, destbuf, len);
-    total += ticks_since(tv);
+    memcpy_total += ticks_since(tv);
+    memset(clrbuf, 0, CACHECLR);
 #endif
-  memset(clrbuf, 0, CACHECLR);
 
 #if MEMCMP
-    tv2 = get_ticks();
+    tv = get_ticks();
     if(memcmp(srcbuf, destbuf, len)) {
-	printf("ERROR: copy failed %hhx %hhx.\n", destbuf[0], srcbuf[0]);
+	printf("ERROR: memcpy failed %hhx %hhx.\n", destbuf[0], srcbuf[0]);
     }
-    total2 += ticks_since(tv2);
+    memcmp_total += ticks_since(tv);
 #endif
 
- // }
-  printf("ticks total: %llu %llu.\n", total, total2);
+#if STRCPY
+    memset(srcbuf, ' ', len);
+    destbuf[len - 1] = srcbuf[len - 1] = '\0';
+    tv = get_ticks();
+    strcpy(destbuf, srcbuf);
+    strcpy_total += ticks_since(tv);
+#endif
+
+#if STRCMP
+    tv = get_ticks();
+    if (strcmp(destbuf, srcbuf)) {
+	printf("ERROR: memcpy failed %hhx %hhx.\n", destbuf[0], srcbuf[0]);
+    }
+    strcmp_total += ticks_since(tv);
+#endif
+
+  }
+  printf("ticks total:\n");
+#if MEMCPY
+  printf("\tmemcpy:\t%llu\n", memcpy_total);
+#endif
+#if MEMCMP
+  printf("\tmemcmp:\t%llu\n", memcmp_total);
+#endif
+#if STRCPY
+  printf("\tstrcpy:\t%llu\n", strcpy_total);
+#endif
+#if STRCMP
+  printf("\tstrcmp:\t%llu\n", strcmp_total);
+#endif
   return 0;
 }
 

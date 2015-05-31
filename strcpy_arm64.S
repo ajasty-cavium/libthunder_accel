@@ -93,6 +93,7 @@ strcpy_s:
 	mov	w0, w0
 	mov	w1, w1
 #endif
+	prfm	pldl1strm, [src]
 	/* For moderately short strings, the fastest way to do the copy is to
 	   calculate the length of the string in the same way as strlen, then
 	   essentially do a memcpy of the result.  This avoids the need for
@@ -203,6 +204,7 @@ L(fp_lt2):
 	/* Aligning here ensures that the entry code and main loop all lies
 	   within one 64-byte cache line.  */
 L(bulk_entry):
+	prfm	pldl1strm, [src, 128]
 	sub	to_align, to_align, #16
 	stp	data1, data2, [dstin]
 	sub	src, srcin, to_align
@@ -216,6 +218,7 @@ L(bulk_entry):
 L(main_loop):
 	stp	data1, data2, [dst], #16
 L(entry_no_page_cross):
+	prfm	pldl1strm, [src, 256]
 	ldp	data1, data2, [src], #16
 	sub	tmp1, data1, zeroones
 	orr	tmp2, data1, #REP8_7f
