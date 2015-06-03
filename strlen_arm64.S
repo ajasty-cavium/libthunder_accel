@@ -22,9 +22,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/linkage.h>
-#include <asm/assembler.h>
 
+	.global strlen_s
 /*
  * calculate the length of a string
  *
@@ -56,9 +55,10 @@ pos		.req	x12
 #define REP8_7f 0x7f7f7f7f7f7f7f7f
 #define REP8_80 0x8080808080808080
 
-ENTRY(strlen)
-	mov	zeroones, #REP8_01
+strlen_s:
 	bic	src, srcin, #15
+	mov	zeroones, #REP8_01
+	prfm	pldl1strm, [src, 128]
 	ands	tmp1, srcin, #15
 	b.ne	.Lmisaligned
 	/*
@@ -72,7 +72,9 @@ ENTRY(strlen)
 	* especially on cores with a high number of issue slots per
 	* cycle, as we get much better parallelism out of the operations.
 	*/
+	.p2align 7
 .Lloop:
+	prfm	pldl1strm, [src, 256]
 	ldp	data1, data2, [src], #16
 .Lrealigned:
 	sub	tmp1, data1, zeroones
@@ -86,7 +88,6 @@ ENTRY(strlen)
 
 	sub	len, src, srcin
 	cbz	has_nul1, .Lnul_in_data2
-CPU_BE(	mov	data2, data1 )	/*prepare data to re-calculate the syndrome*/
 	sub	len, len, #8
 	mov	has_nul2, has_nul1
 .Lnul_in_data2:
@@ -96,10 +97,6 @@ CPU_BE(	mov	data2, data1 )	/*prepare data to re-calculate the syndrome*/
 	* easiest way to get the correct byte is to byte-swap the data
 	* and calculate the syndrome a second time.
 	*/
-CPU_BE( rev	data2, data2 )
-CPU_BE( sub	tmp1, data2, zeroones )
-CPU_BE( orr	tmp2, data2, #REP8_7f )
-CPU_BE( bic	has_nul2, tmp1, tmp2 )
 
 	sub	len, len, #8
 	rev	has_nul2, has_nul2
@@ -113,14 +110,10 @@ CPU_BE( bic	has_nul2, tmp1, tmp2 )
 	ldp	data1, data2, [src], #16
 	lsl	tmp1, tmp1, #3		/* Bytes beyond alignment -> bits.  */
 	mov	tmp2, #~0
-	/* Big-endian.  Early bytes are at MSB.  */
-CPU_BE( lsl	tmp2, tmp2, tmp1 )	/* Shift (tmp1 & 63).  */
-	/* Little-endian.  Early bytes are at LSB.  */
-CPU_LE( lsr	tmp2, tmp2, tmp1 )	/* Shift (tmp1 & 63).  */
+	lsr	tmp2, tmp2, tmp1 	/* Shift (tmp1 & 63).  */
 
 	orr	data1, data1, tmp2
 	orr	data2a, data2, tmp2
 	csinv	data1, data1, xzr, le
 	csel	data2, data2, data2a, le
 	b	.Lrealigned
-ENDPROC(strlen)

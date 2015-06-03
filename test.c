@@ -2,32 +2,32 @@
 #include <string.h>
 #include <stdio.h>
 
-//#define BUFLEN (4096<<6)
-//#define BUFLEN (4096<<4)
-//#define BUFLEN (1 << 17)
-//#define BUFLEN (1<<10)
 #define BUFLEN (1<<9)
 #define NRUNS (1<<4)
-#define CACHECLR (1<<26)
+#define CACHECLR (1<<28)
 
-#ifndef MEMCLR
-#define MEMCLR 1
+#ifndef TEST_MEMCLR
+#define TEST_MEMCLR 1
 #endif
-#ifndef MEMSET
-#define MEMSET 1
+#ifndef TEST_MEMSET
+#define TEST_MEMSET 1
 #endif
-#ifndef MEMCPY
-#define MEMCPY 1
+#ifndef TEST_MEMCPY
+#define TEST_MEMCPY 1
 #endif
-#ifndef MEMCMP
-#define MEMCMP 1
+#ifndef TEST_MEMCMP
+#define TEST_MEMCMP 1
 #endif
-#ifndef STRCPY
-#define STRCPY 1
+#ifndef TEST_STRCPY
+#define TEST_STRCPY 1
 #endif
-#ifndef STRCMP
-#define STRCMP 1
+#ifndef TEST_STRCMP
+#define TEST_STRCMP 1
 #endif
+#ifndef TEST_STRLEN
+#define TEST_STRLEN 1
+#endif
+
 
 
 extern void accel_announce(void);
@@ -68,80 +68,109 @@ int cmpbuf(const char *src, const char *dest)
     return memcmp(src, dest, BUFLEN);
 }
 
-int runtest(int len)
+void clearcache()
 {
-  int i, runs = NRUNS;
+    memset(clrbuf, 0, CACHECLR);
+}
+
+int runtest(int len, int runs, int doprint)
+{
+  int i;
   unsigned long long tv;
   unsigned long long memcpy_total = 0, memcmp_total = 0;
   unsigned long long strcpy_total = 0, strcmp_total = 0;
+  unsigned long long strlen_total = 0;
   for (i = 0; i < runs; i++) {
     memset(clrbuf, 0, CACHECLR);
-#if MEMCLR
+#if TEST_MEMCLR
     memset(destbuf, 0, len);
-    memset(clrbuf, 0, CACHECLR);
+    clearcache();
 #endif
-#if MEMSET
+#if TEST_MEMSET
     memset(srcbuf, 1, len);
-    memset(clrbuf, 0, CACHECLR);
+    clearcache();
 #endif
-#if MEMCPY
+#if TEST_MEMCPY
     tv = get_ticks();
     memcpy(srcbuf, destbuf, len);
     memcpy_total += ticks_since(tv);
-    memset(clrbuf, 0, CACHECLR);
+    clearcache();
 #endif
 
-#if MEMCMP
+#if TEST_MEMCMP
     tv = get_ticks();
     if(memcmp(srcbuf, destbuf, len)) {
 	printf("ERROR: memcpy failed %hhx %hhx.\n", destbuf[0], srcbuf[0]);
     }
     memcmp_total += ticks_since(tv);
+    clearcache();
 #endif
 
-#if STRCPY
+#if TEST_STRCPY
     memset(srcbuf, ' ', len);
     destbuf[len - 1] = srcbuf[len - 1] = '\0';
     tv = get_ticks();
     strcpy(destbuf, srcbuf);
     strcpy_total += ticks_since(tv);
+    clearcache();
 #endif
 
-#if STRCMP
+#if TEST_STRCMP
     tv = get_ticks();
     if (strcmp(destbuf, srcbuf)) {
-	printf("ERROR: memcpy failed %hhx %hhx.\n", destbuf[0], srcbuf[0]);
+	printf("ERROR: strcpy failed %hhx %hhx.\n", destbuf[0], srcbuf[0]);
     }
     strcmp_total += ticks_since(tv);
+    clearcache();
+#endif
+
+#if TEST_STRLEN
+    {
+	int slen;
+        tv = get_ticks();
+	slen = strlen(destbuf);
+        strlen_total += ticks_since(tv);
+	if (slen != (len - 1))
+	    printf("strlen = %i not %i.\n", slen, len - 1);
+    }
+    clearcache();
 #endif
 
   }
+  if (!doprint) return 0;
+
   printf("ticks total:\n");
-#if MEMCPY
-  printf("\tmemcpy:\t%llu\n", memcpy_total);
+#if TEST_MEMCPY
+  printf("\tmemcpy:\t%llu\n", memcpy_total / runs, memcpy_total);
 #endif
-#if MEMCMP
-  printf("\tmemcmp:\t%llu\n", memcmp_total);
+#if TEST_MEMCMP
+  printf("\tmemcmp:\t%llu\n", memcmp_total / runs, memcmp_total);
 #endif
-#if STRCPY
-  printf("\tstrcpy:\t%llu\n", strcpy_total);
+#if TEST_STRCPY
+  printf("\tstrcpy:\t%llu\n", strcpy_total / runs, strcpy_total);
 #endif
-#if STRCMP
-  printf("\tstrcmp:\t%llu\n", strcmp_total);
+#if TEST_STRCMP
+  printf("\tstrcmp:\t%llu\n", strcmp_total / runs, strcmp_total);
+#endif
+#if TEST_STRLEN
+  printf("\tstrlen:\t%llu\n", strlen_total / runs, strlen_total);
 #endif
   return 0;
 }
 
 int main(int argc, void **argv)
 {
-  int v = BUFLEN;
+  int v = BUFLEN, r = NRUNS;
 
-  if (argc == 2) v = atoi(argv[1]);
+  if (argc >= 2) v = atoi(argv[1]);
+  if (argc >= 3) r = atoi(argv[2]);
 
   srcbuf = malloc(v);
   destbuf = malloc(v);
   clrbuf = malloc(CACHECLR);
 
-  return runtest(v);
+  runtest(1, 1, 0);
+
+  return runtest(v, r, 1);
 }
 

@@ -22,14 +22,17 @@ ifeq ($(ARCH),AARCH64)
 	STRCPY_S=strcpy_arm64.S
 	STRCMP_O=strcmp_arm64.o
 	STRCMP_S=strcmp_arm64.S
+	STRLEN_O=strlen_arm64.o
+	STRLEN_S=strlen_arm64.S
 
-	ACCEL_O=$(MEMCPY_O) $(MEMCMP_O) $(STRCPY_O) $(STRCMP_O)
-	ACCEL_S=$(MEMCPY_S) $(MEMCMP_S) $(STRCPY_S) $(STRCMP_S)
+
+	ACCEL_O=$(MEMCPY_O) $(MEMCMP_O) $(STRCPY_O) $(STRCMP_O) $(STRLEN_O)
+	ACCEL_S=$(MEMCPY_S) $(MEMCMP_S) $(STRCPY_S) $(STRCMP_S) $(STRLEN_S)
 endif
 endif
 
 CFLAGS=-fPIC -ggdb -O3 $(CDEFS) -flto
-LDFLAGS=-shared  -fPIC -ggdb -O0 -rdynamic 
+LDFLAGS=-shared  -fPIC -ggdb -O3 -rdynamic -flto
 
 LIBTHUNDER_OBJS = thunder_accel.o $(ACCEL_O)
 LIBTHUNDER_LOBJS = memcpy_64.lo thunder_accel.lo
@@ -44,7 +47,7 @@ test.o: test.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 libthunder_accel.so: libthunder_accel.a
-	$(CC) $(LDFLAGS) -o libthunder_accel.so $(LIBTHUNDER_OBJS) -ldl
+	$(CC) $(LDFLAGS) -o libthunder_accel.so $(LIBTHUNDER_OBJS)
 
 libthunder_accel.a: $(LIBTHUNDER_OBJS)
 	$(AR) cru libthunder_accel.a $(LIBTHUNDER_OBJS)
@@ -61,5 +64,5 @@ clean:
 	rm -rf .libs
 
 run: all
-	LD_PRELOAD=/home/bill/src/libthunder_accel/libthunder_accel.so ./test $(BUFLEN)
-	./test $(BUFLEN)
+	LD_PRELOAD=/home/bill/src/libthunder_accel/libthunder_accel.so ./test $(BUFLEN) $(NRUNS)
+	./test $(BUFLEN) $(NRUNS)

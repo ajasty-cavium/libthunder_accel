@@ -1,13 +1,13 @@
 #define _GNU_SOURCE
 #define _HAVE_STRING_ARCH_strcmp
+#define _HAVE_STRING_ARCH_strlen
 
 #include <stdio.h>
 #include <string.h>
-#include <dlfcn.h>
-//typedef unsigned long size_t;
 
-#define MEMCPY_FALLBACK 0
-#define MEMCMP_FALLBACK 0
+#define HANDLE_STRCPY 1
+#define HANDLE_STRCMP 1
+#define HANDLE_STRLEN 1
 
 void *(*memcpy_c)(void *, const void *, size_t);
 int (*memcmp_c)(const void *, const const void *, size_t);
@@ -17,60 +17,40 @@ int memcmp_s(const void *s1, const void *s2, size_t len);
 
 char *strcpy_s(char *dest, const char *src);
 int strcmp_s(const char *s1, const char *s2);
-size_t strlen(const char *s);
+size_t strlen_s(const char *s);
 
 extern void accel_announce(void);
 
 void *memcpy(void *dest, const void *src, size_t len)
 {
-#if MEMCPY_FALLBACK
-  /*printf("memcpy_s %i.\n", len);*/
-  if (len < (1<<15)) {
-
-  if (!memcpy_c) {
-    memcpy_c = dlsym(RTLD_NEXT, "memcpy");
-  }
-
-  return memcpy_c(dest, src, len);
-  }
-#endif
-#if defined(AARCH64)
-  return memcpy_s(dest, src, len);
-#elif defined(X64)
-  return memcpy_s(dest, src, len);
-#endif
+    return memcpy_s(dest, src, len);
 }
 
 int memcmp(const void *s1, const void *s2, size_t len)
 {
- #if MEMCMP_FALLBACK
-  /*printf("memcpy_s %i.\n", len);*/
-  if (len < (1<<15)) {
-
-  if (!memcmp_c) {
-    memcmp_c = dlsym(RTLD_NEXT, "memcmp");
-  }
- return memcmp_c(s1, s2, len);
-
-  }
-#endif
- return memcmp_s(s1, s2, len);
+    return memcmp_s(s1, s2, len);
 }
 
+#if HANDLE_STRCPY
 char *strcpy(char *dest, const char *src)
 {
-  return strcpy_s(dest, src);
+    return strcpy_s(dest, src);
 }
+#endif
 
+#if HANDLE_STRCMP
 int strcmp(const char *s1, const char *s2)
 {
-  return strcmp_s(s1, s2);
+    return strcmp_s(s1, s2);
 }
+#endif
 
+#if HANDLE_STRLEN
 size_t strlen(const char *s)
 {
     return strlen_s(s);
 }
+#endif
 
 void accel_announce()
 {

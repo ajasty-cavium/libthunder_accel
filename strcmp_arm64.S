@@ -62,12 +62,15 @@ strcmp_s:
 	b.ne	L(misaligned8)
 	ands	tmp1, src1, #7
 	b.ne	L(mutual_align)
+	b	L(loop_aligned)
 	/* NUL detection works on the principle that (X - 1) & (~X) & 0x80
 	   (=> (X - 1) & ~(X | 0x7f)) is non-zero iff a byte is zero, and
 	   can be done in parallel across the entire word.  */
 	.p2align	7
 L(loop_aligned):
 	ldr	data1, [src1], #8
+	prfm	pldl1strm, [src1, 128]
+	prfm	pldl1strm, [src2, 128]
 	ldr	data2, [src2], #8
 L(start_realigned):
 	sub	tmp1, data1, zeroones
