@@ -25,14 +25,19 @@ ifeq ($(ARCH),AARCH64)
 	STRLEN_O=strlen_arm64.o
 	STRLEN_S=strlen_arm64.S
 
+	BITOPS_S=bitops.S
+	BITOPS_O=bitops.o
 
-	ACCEL_O=$(MEMCPY_O) $(MEMCMP_O) $(STRCPY_O) $(STRCMP_O) $(STRLEN_O)
-	ACCEL_S=$(MEMCPY_S) $(MEMCMP_S) $(STRCPY_S) $(STRCMP_S) $(STRLEN_S)
+	MEMSET_S=memset_arm64.S
+	MEMSET_O=memset_arm64.o
+
+	ACCEL_O=$(MEMCPY_O) $(MEMCMP_O) $(STRCPY_O) $(STRCMP_O) $(STRLEN_O) $(MEMSET_O) $(BITOPS_O)
+	ACCEL_S=$(MEMCPY_S) $(MEMCMP_S) $(STRCPY_S) $(STRCMP_S) $(STRLEN_S) $(MEMSET_S) $(BITOPS_S)
 endif
 endif
 
-CFLAGS=-fPIC -ggdb -O3 $(CDEFS) -flto
-LDFLAGS=-shared  -fPIC -ggdb -O3 -rdynamic -flto
+CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -flto
+LDFLAGS=-shared  -fPIC -ggdb -Ofast -rdynamic -flto
 
 LIBTHUNDER_OBJS = thunder_accel.o $(ACCEL_O)
 LIBTHUNDER_LOBJS = memcpy_64.lo thunder_accel.lo
@@ -64,5 +69,5 @@ clean:
 	rm -rf .libs
 
 run: all
-	LD_PRELOAD=/home/bill/src/libthunder_accel/libthunder_accel.so ./test $(BUFLEN) $(NRUNS)
+	LD_PRELOAD=./libthunder_accel.so ./test $(BUFLEN) $(NRUNS)
 	./test $(BUFLEN) $(NRUNS)

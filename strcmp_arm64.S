@@ -16,7 +16,6 @@
    License along with the GNU C Library.  If not, see
    <http://www.gnu.org/licenses/>.  */
 
-#define L(x)	_ ## x
 /* Assumptions:
  *
  * ARMv8-a, AArch64
@@ -45,32 +44,32 @@
 #define zeroones	x10
 #define pos		x11
 
-	.global strcmp_s
+#define L(x) _ ## x
+
+	.global strcmp_x
 
 	/* Start of performance-critical section  -- one 64B cache line.  */
-strcmp_s:
+strcmp_x:
+
 #ifdef __ILP32__
 	/* Zero extend the pointers that is passed in w0 and w1. */
 	mov	w0, w0
 	mov	w1, w1
 #endif
-	prfm	pldl1strm, [src1]
-	prfm	pldl1strm, [src2]
+	prfm	pldl1keep, [src2]
 	eor	tmp1, src1, src2
 	mov	zeroones, #REP8_01
 	tst	tmp1, #7
 	b.ne	L(misaligned8)
 	ands	tmp1, src1, #7
 	b.ne	L(mutual_align)
-	b	L(loop_aligned)
 	/* NUL detection works on the principle that (X - 1) & (~X) & 0x80
 	   (=> (X - 1) & ~(X | 0x7f)) is non-zero iff a byte is zero, and
 	   can be done in parallel across the entire word.  */
-	.p2align	7
 L(loop_aligned):
+	prfm	pldl1keep, [src1, 128]
+	prfm	pldl1keep, [src2, 128]
 	ldr	data1, [src1], #8
-	prfm	pldl1strm, [src1, 128]
-	prfm	pldl1strm, [src2, 128]
 	ldr	data2, [src2], #8
 L(start_realigned):
 	sub	tmp1, data1, zeroones
@@ -162,3 +161,4 @@ L(misaligned8):
 	b.eq	L(misaligned8)
 	sub	result, data1, data2
 	RET
+

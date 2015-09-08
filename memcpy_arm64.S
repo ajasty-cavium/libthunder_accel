@@ -55,6 +55,7 @@ D_l	.req	x13
 D_h	.req	x14
 
 memcpy_s:
+	prfm	pldl1strm,[src]
 	mov	dst, dstin
 	cmp	count, #16
 	/*When memory length is less than 16, the accessed are not aligned.*/
@@ -143,7 +144,7 @@ memcpy_s:
 	ret
 
 .Lcpy_over64:
-	prfm	pldl1strm,[src]
+	prfm	pldl1strm,[src, 128]
 	subs	count, count, #128
 	b.ge	.Lcpy_body_large
 	/*

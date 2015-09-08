@@ -93,7 +93,8 @@ strcpy_s:
 	mov	w0, w0
 	mov	w1, w1
 #endif
-	prfm	pldl1strm, [src]
+	prfm	pldl1keep, [src]
+	prfm	pstl2keep, [dst]
 	/* For moderately short strings, the fastest way to do the copy is to
 	   calculate the length of the string in the same way as strlen, then
 	   essentially do a memcpy of the result.  This avoids the need for

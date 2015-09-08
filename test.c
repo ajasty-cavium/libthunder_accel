@@ -1,13 +1,17 @@
+#define _GNU_SOURCE
+#define _HAVE_STRING_ARCH_strcmp
+#define _HAVE_STRING_ARCH_strcpy
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
 #define BUFLEN (1<<9)
 #define NRUNS (1<<4)
-#define CACHECLR (1<<28)
+#define CACHECLR (1<<26)
 
-#ifndef TEST_MEMCLR
-#define TEST_MEMCLR 1
+#ifndef TEST_BZERO
+#define TEST_BZERO 0
 #endif
 #ifndef TEST_MEMSET
 #define TEST_MEMSET 1
@@ -16,16 +20,16 @@
 #define TEST_MEMCPY 1
 #endif
 #ifndef TEST_MEMCMP
-#define TEST_MEMCMP 1
+#define TEST_MEMCMP 0
 #endif
 #ifndef TEST_STRCPY
-#define TEST_STRCPY 1
+#define TEST_STRCPY 0
 #endif
 #ifndef TEST_STRCMP
-#define TEST_STRCMP 1
+#define TEST_STRCMP 0
 #endif
 #ifndef TEST_STRLEN
-#define TEST_STRLEN 1
+#define TEST_STRLEN 0
 #endif
 
 
@@ -80,14 +84,21 @@ int runtest(int len, int runs, int doprint)
   unsigned long long memcpy_total = 0, memcmp_total = 0;
   unsigned long long strcpy_total = 0, strcmp_total = 0;
   unsigned long long strlen_total = 0;
+  unsigned long long bzero_total = 0, memset_total = 0;
+
+
   for (i = 0; i < runs; i++) {
-    memset(clrbuf, 0, CACHECLR);
-#if TEST_MEMCLR
-    memset(destbuf, 0, len);
+    clearcache();
+#if TEST_BZERO
+    tv = get_ticks();
+    bzero(destbuf, len);
+    bzero_total += ticks_since(tv);
     clearcache();
 #endif
 #if TEST_MEMSET
+    tv = get_ticks();
     memset(srcbuf, 1, len);
+    memset_total += ticks_since(tv);
     clearcache();
 #endif
 #if TEST_MEMCPY
@@ -135,25 +146,32 @@ int runtest(int len, int runs, int doprint)
     }
     clearcache();
 #endif
+    
 
   }
   if (!doprint) return 0;
 
-  printf("ticks total:\n");
+ printf("%i runs, ticks total:\n", runs); 
+#if TEST_BZERO
+  printf("\tbzero:\t%llu\n", bzero_total / runs);
+#endif
+#if TEST_MEMSET
+  printf("\tmemset:\t%llu\n", memset_total / runs);
+#endif
 #if TEST_MEMCPY
-  printf("\tmemcpy:\t%llu\n", memcpy_total / runs, memcpy_total);
+  printf("\tmemcpy:\t%llu\n", memcpy_total / runs);
 #endif
 #if TEST_MEMCMP
-  printf("\tmemcmp:\t%llu\n", memcmp_total / runs, memcmp_total);
+  printf("\tmemcmp:\t%llu\n", memcmp_total / runs);
 #endif
 #if TEST_STRCPY
-  printf("\tstrcpy:\t%llu\n", strcpy_total / runs, strcpy_total);
+  printf("\tstrcpy:\t%llu\n", strcpy_total / runs);
 #endif
 #if TEST_STRCMP
-  printf("\tstrcmp:\t%llu\n", strcmp_total / runs, strcmp_total);
+  printf("\tstrcmp:\t%llu\n", strcmp_total / runs);
 #endif
 #if TEST_STRLEN
-  printf("\tstrlen:\t%llu\n", strlen_total / runs, strlen_total);
+  printf("\tstrlen:\t%llu\n", strlen_total / runs);
 #endif
   return 0;
 }
