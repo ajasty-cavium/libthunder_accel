@@ -173,7 +173,7 @@ memcpy_s:
 	lsr	D_h, count, #7
 	cmp 	D_h, #0
 	b.lt	4f
-	mov	D_h, #4
+	mov	D_h, #PRFM_LINES
 4:
 	prfm	pldl1strm,[D_l, 128]
 	add	D_l, D_l, #128
@@ -190,7 +190,7 @@ memcpy_s:
 	* loaded 64 bytes data.
 	*/
 	tbz	src, #6, 2f
-	prfm 	pldl1strm,[src,512]
+	prfm 	pldl1strm,[src,PRFM_STRIDE]
 2:
 
 	stp	A_l, A_h, [dst],#16

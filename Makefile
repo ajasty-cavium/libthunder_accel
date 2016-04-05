@@ -36,7 +36,7 @@ ifeq ($(ARCH),AARCH64)
 endif
 endif
 
-CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -flto
+CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -flto -DPRFM_LINES=4 -DPRFM_STRIDE=512
 LDFLAGS=-shared  -fPIC -ggdb -Ofast -rdynamic -flto
 
 LIBTHUNDER_OBJS = thunder_accel.o $(ACCEL_O)
