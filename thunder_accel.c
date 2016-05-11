@@ -12,6 +12,8 @@
 #define HANDLE_STRCPY 0
 #define HANDLE_STRCMP 0
 #define HANDLE_STRLEN 0
+#define HANDLE_ISO_CONV 1
+#define HANDLE_MUTEX_LOCK 1
 
 void *(*memcpy_c)(void *, const void *, size_t);
 int (*memcmp_c)(const void *, const const void *, size_t);
@@ -24,6 +26,8 @@ void bzero_s(void *s, size_t n);
 char *strcpy_s(char *dest, const char *src);
 int strcmp_s(const char *s1, const char *s2);
 size_t strlen_s(const char *s);
+
+int iso_conv_s(const unsigned short*, char*, int);
 
 extern void accel_announce(void);
 
@@ -73,6 +77,37 @@ int strcmp(const char *s1, const char *s2)
 size_t strlen(const char *s)
 {
     return strlen_s(s);
+}
+#endif
+
+#if HANDLE_ISO_CONV
+int iso_conv(const unsigned short *c, char *d, int l)
+{
+    return iso_conv_s(c, d, l);
+}
+#endif
+
+#if HANDLE_MUTEX_LOCK
+#define _GNU_SOURCE
+#include <pthread.h>
+
+#define MAX_USER_SPIN 3
+#define MAX_YIELD_SPIN 10
+
+int pthread_mutex_lock(pthread_mutex_t *mutex)
+{
+	int i, j;
+
+	for (j = 0; j < MAX_YIELD_SPIN; j++) {
+		for (i = 0; i < MAX_USER_SPIN; i++) {
+		        if (pthread_mutex_trylock(mutex) == 0)
+				return 0;
+		}
+		yield();
+	}
+
+	pthread_mutex_lock(mutex);
+	return 0;
 }
 #endif
 

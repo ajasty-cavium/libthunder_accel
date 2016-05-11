@@ -2,6 +2,9 @@
 ARCH=AARCH64
 #ARCH=X64
 
+PRFM_CLINES=7
+PRFM_STRIDE=896
+
 CC=gcc
 AR=ar
 RANLIB=ranlib
@@ -25,18 +28,22 @@ ifeq ($(ARCH),AARCH64)
 	STRLEN_O=strlen_arm64.o
 	STRLEN_S=strlen_arm64.S
 
+	ISO_CONV_O=iso_conv_arm64.o
+	ISO_CONV_S=iso_conv_arm64.S
+
 	BITOPS_S=bitops.S
 	BITOPS_O=bitops.o
 
 	MEMSET_S=memset_arm64.S
 	MEMSET_O=memset_arm64.o
 
-	ACCEL_O=$(MEMCPY_O) $(MEMCMP_O) $(STRCPY_O) $(STRCMP_O) $(STRLEN_O) $(MEMSET_O) $(BITOPS_O)
-	ACCEL_S=$(MEMCPY_S) $(MEMCMP_S) $(STRCPY_S) $(STRCMP_S) $(STRLEN_S) $(MEMSET_S) $(BITOPS_S)
+	ACCEL_O=$(MEMCPY_O) $(MEMCMP_O) $(STRCPY_O) $(STRCMP_O) $(STRLEN_O) $(MEMSET_O) $(BITOPS_O) $(ISO_CONV_O)
+	ACCEL_S=$(MEMCPY_S) $(MEMCMP_S) $(STRCPY_S) $(STRCMP_S) $(STRLEN_S) $(MEMSET_S) $(BITOPS_S) $(ISO_CONV_S)
 endif
 endif
 
-CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -flto -DPRFM_LINES=4 -DPRFM_STRIDE=512
+CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -flto -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE) -mno-ldpstp-merge
+CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -flto -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE)
 LDFLAGS=-shared  -fPIC -ggdb -Ofast -rdynamic -flto
 
 LIBTHUNDER_OBJS = thunder_accel.o $(ACCEL_O)
@@ -45,8 +52,8 @@ LIBTHUNDER_SRCS = thunder_accel.c $(ACCEL_S)
 
 all: libthunder_accel.so test
 
-test: test.o
-	$(CC) $(CFLAGS) -o $@ $<
+test: test.o $(ISO_CONV_O)
+	$(CC) $(CFLAGS) -o $@ $< $(ISO_CONV_O)
 
 test.o: test.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -61,7 +68,7 @@ libthunder_accel.a: $(LIBTHUNDER_OBJS)
 thunder_accel.o: thunder_accel.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(MEMCPY_O): $(MEMCPY_S)
+$(MEMCPY_O): $(MEMCPY_S) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:

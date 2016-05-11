@@ -32,10 +32,13 @@
 #define TEST_STRLEN 0
 #endif
 
-
+#ifndef TEST_ISO_CONV
+#define TEST_ISO_CONV 1
+#endif
 
 extern void accel_announce(void);
 extern void *memcpy_d(void *, const void *, size_t);
+extern int iso_conv_s(const unsigned short *, char *, int);
 
 char *destbuf, *srcbuf, *clrbuf;
 
@@ -83,7 +86,7 @@ int runtest(int len, int runs, int doprint)
   unsigned long long tv;
   unsigned long long memcpy_total = 0, memcmp_total = 0;
   unsigned long long strcpy_total = 0, strcmp_total = 0;
-  unsigned long long strlen_total = 0;
+  unsigned long long strlen_total = 0, iso_conv_total = 0;
   unsigned long long bzero_total = 0, memset_total = 0;
 
 
@@ -146,6 +149,22 @@ int runtest(int len, int runs, int doprint)
     }
     clearcache();
 #endif
+
+#if TEST_ISO_CONV
+    {
+	int c = 128;
+	tv = get_ticks();
+	c = iso_conv_s((const unsigned short*)srcbuf, (char*)destbuf, c);
+	iso_conv_total += ticks_since(tv);
+	//printf("iso_conv = %i.\n", c);
+    }
+    {
+	int c = 31;
+	c = iso_conv_s((const unsigned short*)srcbuf, (char*)destbuf, c);
+	//printf("iso_conv = %i.\n", c);
+    }
+
+#endif
     
 
   }
@@ -172,6 +191,9 @@ int runtest(int len, int runs, int doprint)
 #endif
 #if TEST_STRLEN
   printf("\tstrlen:\t%llu\n", strlen_total / runs);
+#endif
+#if TEST_ISO_CONV
+  printf("\tiso_conv:\t%llu\n", iso_conv_total / runs);
 #endif
   return 0;
 }
