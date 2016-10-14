@@ -2,8 +2,10 @@
 #define _HAVE_STRING_ARCH_strcmp
 #define _HAVE_STRING_ARCH_strlen
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <dlfcn.h>
 
 #define HANDLE_BZERO  0
 #define HANDLE_MEMSET 0
@@ -12,7 +14,7 @@
 #define HANDLE_STRCPY 0
 #define HANDLE_STRCMP 0
 #define HANDLE_STRLEN 0
-#define HANDLE_ISO_CONV 1
+#define HANDLE_ISO_CONV 0
 #define HANDLE_MUTEX_LOCK 1
 
 void *(*memcpy_c)(void *, const void *, size_t);
@@ -94,20 +96,34 @@ int iso_conv(const unsigned short *c, char *d, int l)
 #define MAX_USER_SPIN 3
 #define MAX_YIELD_SPIN 10
 
+int (*real_pthread_mutex_lock)(pthread_mutex_t*);
+int yield_spin = -1, user_spin = -1;
+
+static void run_once(void) __attribute__((constructor));
+void run_once()
+{
+    char *ys = getenv("LIBTXL_YIELD_SPIN");
+    char *us = getenv("LIBTXL_USER_SPIN");
+    yield_spin = MAX_YIELD_SPIN;
+    user_spin = MAX_USER_SPIN;
+    if (ys != NULL) yield_spin = atoi(ys);
+    if (us != NULL) user_spin = atoi(ys);
+    real_pthread_mutex_lock = dlsym(RTLD_NEXT, "pthread_mutex_lock");
+}
+
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
 	int i, j;
 
-	for (j = 0; j < MAX_YIELD_SPIN; j++) {
-		for (i = 0; i < MAX_USER_SPIN; i++) {
+	for (j = 0; j < yield_spin; j++) {
+		for (i = 0; i < user_spin; i++) {
 		        if (pthread_mutex_trylock(mutex) == 0)
 				return 0;
 		}
-		yield();
+		pthread_yield();
 	}
 
-	pthread_mutex_lock(mutex);
-	return 0;
+	return (*real_pthread_mutex_lock)(mutex);
 }
 #endif
 

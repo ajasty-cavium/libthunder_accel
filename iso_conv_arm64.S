@@ -25,6 +25,8 @@
 #define L(x) _ ## x
 
 #define LDNSTN	0
+#define LDRN    1
+#define LDMIX	0
 
 /* Assumptions:
  *
@@ -33,8 +35,8 @@
 
 	.global iso_conv_s
 
-dstin	.req	x0
-src	.req	x1
+src	.req	x0
+dstin	.req	x1
 len	.req	x2
 res	.req	x3
 fps	.req	x4
@@ -53,24 +55,43 @@ iso_conv_s:
 .Ln32:
 #if LDNSTN
 	ld1	{v1.8h-v4.8h}, [src]
-#else
+#elif LDRN
 	ldr 	q1, [src]
 	ldr 	q2, [src, 16]
 	ldr 	q3, [src, 32]
 	ldr 	q4, [src, 48]
+#elif LDMIX
+	ldr 	q1, [src]
+	ldr 	q2, [src, 16]
+	uqxtn	v1.8b, v1.8h
+	ldr 	q3, [src, 32]
+	uqxtn2	v1.16b, v2.8h
+	ldr 	q4, [src, 48]
+	uqxtn	v2.8b, v3.8h
+	uqxtn2	v2.16b, v4.8h
+	uqxtn2	v2.16b, v4.8h
+#else
+	movi	v1.8h, #0x0064
+	movi	v2.8h, #0x0063
+	movi	v3.8h, #0x0062
+	movi	v4.8h, #0x0061
 #endif
+#if !LDMIX
 	uqxtn	v1.8b, v1.8h
 	uqxtn2	v1.16b, v2.8h
 	uqxtn	v2.8b, v3.8h
 	uqxtn2	v2.16b, v4.8h
+#endif
 
 	mrs	x4, fpsr
 	cbnz	w4, .Ll8
 #if LDNSTN
 	st1	{v1.16b-v2.16b}, [dstin],#32
-#else
+#elif LDRN || LDMIX
 	str	q1, [dstin], #16
 	str	q2, [dstin], #16
+#else
+	st1	{v1.16b-v2.16b}, [dstin],#32
 #endif
 	subs	len, len, #32
 	add	src, src, #64
@@ -82,11 +103,19 @@ iso_conv_s:
 	msr	fpsr, xzr
 
 .Ln8:
+#if LDNSTN
 	ld1	{v1.8h}, [src]
+#elif LDRN || LDMIX
+	ldr	q1, [src]
+#endif
 	uqxtn	v1.8b, v1.8h
 	mrs	x4, fpsr
 	cbnz	w4, .Ll1
+#if LDNSTN
 	st1	{v1.8b}, [dstin], #8
+#elif LDRN || LDMIX
+	str	q1, [dstin], #8
+#endif
 	subs	len, len, #8
 	add	src, src, #16
 	b.ge	.Ln8
@@ -104,5 +133,5 @@ iso_conv_s:
 	b.gt	.Ln1
 
 .Ldone:
-	sub	dstin, res, len
+	sub	src, res, len
 	ret

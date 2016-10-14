@@ -43,8 +43,8 @@ endif
 endif
 
 CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -flto -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE) -mno-ldpstp-merge
-CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -flto -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE)
-LDFLAGS=-shared  -fPIC -ggdb -Ofast -rdynamic -flto
+CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE) -fshort-wchar -ldl
+LDFLAGS=-shared  -fPIC -ggdb -Ofast -ldl
 
 LIBTHUNDER_OBJS = thunder_accel.o $(ACCEL_O)
 LIBTHUNDER_LOBJS = memcpy_64.lo thunder_accel.lo

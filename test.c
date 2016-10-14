@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#define BUFLEN (1<<9)
+#define BUFLEN (1<<16)
 #define NRUNS (1<<4)
 #define CACHECLR (1<<26)
 
@@ -33,7 +33,7 @@
 #endif
 
 #ifndef TEST_ISO_CONV
-#define TEST_ISO_CONV 1
+#define TEST_ISO_CONV 0
 #endif
 
 extern void accel_announce(void);
@@ -152,16 +152,24 @@ int runtest(int len, int runs, int doprint)
 
 #if TEST_ISO_CONV
     {
-	int c = 128;
+	int c = 32, i = 1000;
+	swprintf((unsigned short*)srcbuf, "%s", L"aaaaaaaabbbbbbbbccccccccdddddddd.");
 	tv = get_ticks();
-	c = iso_conv_s((const unsigned short*)srcbuf, (char*)destbuf, c);
+	while(i--)
+		iso_conv_s((const unsigned short*)srcbuf, (char*)destbuf, c);
 	iso_conv_total += ticks_since(tv);
 	//printf("iso_conv = %i.\n", c);
     }
     {
-	int c = 31;
-	c = iso_conv_s((const unsigned short*)srcbuf, (char*)destbuf, c);
-	//printf("iso_conv = %i.\n", c);
+	int c = 33;
+	memset(destbuf, 0, 66);
+	//c = iso_conv_s((const unsigned short*)srcbuf, (char*)destbuf, c);
+	//c = swprintf((unsigned short*)srcbuf, "%s", L"aaaaaaaabbbbbbbbccccccccdddddddd.");
+	wcscpy(srcbuf, L"aaaaaaaabbbbbbbbccccccccdddddddd.");
+	printf("len=%i %ls.\n", c, srcbuf);
+	c = iso_conv_s((const unsigned short*) srcbuf, (char*)destbuf, c);
+	printf("iso_conv = %i %s.\n", c, destbuf);
+	write(1, destbuf, c);
     }
 
 #endif
