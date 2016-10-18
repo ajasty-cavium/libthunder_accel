@@ -107,8 +107,9 @@ void run_once()
     yield_spin = MAX_YIELD_SPIN;
     user_spin = MAX_USER_SPIN;
     if (ys != NULL) yield_spin = atoi(ys);
-    if (us != NULL) user_spin = atoi(ys);
+    if (us != NULL) user_spin = atoi(us);
     real_pthread_mutex_lock = dlsym(RTLD_NEXT, "pthread_mutex_lock");
+    fprintf(stderr, "mutex = %i %i.\n", yield_spin, user_spin);
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex)
