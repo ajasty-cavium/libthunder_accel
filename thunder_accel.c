@@ -15,12 +15,13 @@
 #define HANDLE_STRCMP 0
 #define HANDLE_STRLEN 0
 #define HANDLE_ISO_CONV 0
-#define HANDLE_MUTEX_LOCK 1
+#define HANDLE_MUTEX_LOCK 0
 
 void *(*memcpy_c)(void *, const void *, size_t);
 int (*memcmp_c)(const void *, const const void *, size_t);
 
 extern void *memcpy_s(void *dest, const void *src, size_t len);
+extern void *memcpy_t(void *dest, const void *src, size_t len);
 int memcmp_s(const void *s1, const void *s2, size_t len);
 void *memset_s(void *s, int c, size_t n);
 void bzero_s(void *s, size_t n);
@@ -36,7 +37,7 @@ extern void accel_announce(void);
 #if HANDLE_MEMCPY
 void *memcpy(void *dest, const void *src, size_t len)
 {
-    return memcpy_s(dest, src, len);
+    return memcpy_t(dest, src, len);
 }
 #endif
 
@@ -92,6 +93,7 @@ int iso_conv(const unsigned short *c, char *d, int l)
 #if HANDLE_MUTEX_LOCK
 #define _GNU_SOURCE
 #include <pthread.h>
+//#include <tls.h>
 
 #define MAX_USER_SPIN 3
 #define MAX_YIELD_SPIN 10
@@ -109,7 +111,47 @@ void run_once()
     if (ys != NULL) yield_spin = atoi(ys);
     if (us != NULL) user_spin = atoi(us);
     real_pthread_mutex_lock = dlsym(RTLD_NEXT, "pthread_mutex_lock");
-    fprintf(stderr, "mutex = %i %i.\n", yield_spin, user_spin);
+    fprintf(stderr, "mutex: yield=%i spin=%i.\n", yield_spin, user_spin);
+}
+
+#if 0
+typedef struct __pthread_internal_list
+{
+  struct __pthread_internal_list *__prev;
+  struct __pthread_internal_list *__next;
+} __pthread_list_t;
+
+ 
+/* Data structures for mutex handling.  The structure of the attribute
+   type is not exposed on purpose.  */
+typedef union
+{
+   struct __pthread_mutex_s
+   {
+     int __lock;
+     unsigned int __count;
+     int __owner;
+     unsigned int __nusers;
+     int __kind;
+     int __spins;
+     __pthread_list_t __list;
+#define __PTHREAD_MUTEX_HAVE_PREV   1
+   } __data;
+   char __size[__SIZEOF_PTHREAD_MUTEX_T];
+   long int __align;
+} pthread_mutex_t;
+#endif
+
+int internal_trylock(pthread_mutex_t *mutex)
+{
+    int v = 0;
+    int res = __atomic_compare_exchange_n(&mutex->__data.__lock, &v, 1, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    if (res == 0) {
+	mutex->__data.__owner = 5;
+	++mutex->__data.__nusers;
+	return 0;
+    }
+    return res;
 }
 
 int pthread_mutex_lock(pthread_mutex_t *mutex)
@@ -118,7 +160,8 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 
 	for (j = 0; j < yield_spin; j++) {
 		for (i = 0; i < user_spin; i++) {
-		        if (pthread_mutex_trylock(mutex) == 0)
+		        //if (pthread_mutex_trylock(mutex) == 0)
+			if (internal_trylock(mutex) == 0)
 				return 0;
 		}
 		pthread_yield();

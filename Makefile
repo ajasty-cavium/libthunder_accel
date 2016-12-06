@@ -5,7 +5,7 @@ ARCH=AARCH64
 PRFM_CLINES=7
 PRFM_STRIDE=896
 
-CC=gcc
+CC=gcc -mcpu=thunderx+lse
 AR=ar
 RANLIB=ranlib
 
@@ -18,6 +18,9 @@ ifeq ($(ARCH),AARCH64)
 	CDEFS=-DAARCH64
 	MEMCPY_O=memcpy_arm64.o
 	MEMCPY_S=memcpy_arm64.S
+	MEMCPYT_O=copy_template.o
+	MEMCPYT_S=copy_template.S
+
 	MEMCMP_O=memcmp_arm64.o
 	MEMCMP_S=memcmp_arm64.S
 
@@ -37,14 +40,14 @@ ifeq ($(ARCH),AARCH64)
 	MEMSET_S=memset_arm64.S
 	MEMSET_O=memset_arm64.o
 
-	ACCEL_O=$(MEMCPY_O) $(MEMCMP_O) $(STRCPY_O) $(STRCMP_O) $(STRLEN_O) $(MEMSET_O) $(BITOPS_O) $(ISO_CONV_O)
-	ACCEL_S=$(MEMCPY_S) $(MEMCMP_S) $(STRCPY_S) $(STRCMP_S) $(STRLEN_S) $(MEMSET_S) $(BITOPS_S) $(ISO_CONV_S)
+	ACCEL_O=$(MEMCPY_O) $(MEMCMP_O) $(STRCPY_O) $(STRCMP_O) $(STRLEN_O) $(MEMSET_O) $(BITOPS_O) $(ISO_CONV_O) $(MEMCPYT_O)
+	ACCEL_S=$(MEMCPY_S) $(MEMCMP_S) $(STRCPY_S) $(STRCMP_S) $(STRLEN_S) $(MEMSET_S) $(BITOPS_S) $(ISO_CONV_S) $(MEMCPYT_S)
 endif
 endif
 
 CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -flto -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE) -mno-ldpstp-merge
-CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE) -fshort-wchar -ldl
-LDFLAGS=-shared  -fPIC -ggdb -Ofast -ldl
+CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE) -fshort-wchar -ldl -mcpu=thunderx+lse
+LDFLAGS=-shared  -fPIC -ggdb -Ofast -ldl 
 
 LIBTHUNDER_OBJS = thunder_accel.o $(ACCEL_O)
 LIBTHUNDER_LOBJS = memcpy_64.lo thunder_accel.lo
@@ -78,3 +81,4 @@ clean:
 run: all
 	LD_PRELOAD=./libthunder_accel.so ./test $(BUFLEN) $(NRUNS)
 	./test $(BUFLEN) $(NRUNS)
+

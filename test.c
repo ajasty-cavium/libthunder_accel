@@ -14,7 +14,7 @@
 #define TEST_BZERO 0
 #endif
 #ifndef TEST_MEMSET
-#define TEST_MEMSET 1
+#define TEST_MEMSET 0
 #endif
 #ifndef TEST_MEMCPY
 #define TEST_MEMCPY 1
@@ -105,9 +105,29 @@ int runtest(int len, int runs, int doprint)
     clearcache();
 #endif
 #if TEST_MEMCPY
+    //len --;
+    memset(destbuf, 0x55, len << 2);
+    char *d = srcbuf;
+    int i, j;
+    for(i = 0; i < (len >> 0); i+=16) {
+	for (j = 0; j < ( 16); j++) {
+	    *(d++) = j;
+	}
+    }
+    //memset(srcbuf, 0xaa, len << 2);
+    clearcache();
     tv = get_ticks();
-    memcpy(srcbuf, destbuf, len);
+    memcpy(destbuf + len, srcbuf, len);
     memcpy_total += ticks_since(tv);
+    if (runs > 1) {
+    printf("%p-%08i:  %08lx: %016lx %08lx: %016lx.\n", destbuf, len, (unsigned long) (destbuf + len - 4), *((unsigned long long*)(destbuf + len - 4)), (unsigned long) (destbuf + (len << 1) - 4), *((unsigned long long*)(destbuf + (len << 1) - 4)));
+    } else {
+	unsigned long *dt = (destbuf + len - 4);
+	//char *s = srcbuf;
+	for (i = 0; i <= len; i += 16) {
+	    printf("%p: %016lx %016lx\n", dt, *(dt++), *(dt++));
+	}
+    }
     clearcache();
 #endif
 
@@ -178,7 +198,7 @@ int runtest(int len, int runs, int doprint)
   }
   if (!doprint) return 0;
 
- printf("%i runs, ticks total:\n", runs); 
+ fprintf(stderr, "%i runs, ticks total:\n", runs); 
 #if TEST_BZERO
   printf("\tbzero:\t%llu\n", bzero_total / runs);
 #endif
@@ -186,7 +206,7 @@ int runtest(int len, int runs, int doprint)
   printf("\tmemset:\t%llu\n", memset_total / runs);
 #endif
 #if TEST_MEMCPY
-  printf("\tmemcpy:\t%llu\n", memcpy_total / runs);
+  fprintf(stderr, "\tmemcpy:\t%llu\n", memcpy_total / runs);
 #endif
 #if TEST_MEMCMP
   printf("\tmemcmp:\t%llu\n", memcmp_total / runs);
@@ -213,11 +233,11 @@ int main(int argc, void **argv)
   if (argc >= 2) v = atoi(argv[1]);
   if (argc >= 3) r = atoi(argv[2]);
 
-  srcbuf = malloc(v);
-  destbuf = malloc(v);
+  srcbuf = malloc(v << 2);
+  destbuf = malloc(v << 2);
   clrbuf = malloc(CACHECLR);
 
-  runtest(1, 1, 0);
+  //runtest(1, 1, 0);
 
   return runtest(v, r, 1);
 }
