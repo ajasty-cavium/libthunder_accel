@@ -55,7 +55,7 @@ void sigusr2(int sig)
     int i;
 
     for (i = 0; i <= NBINS; i++)
-	fprintf(stderr, "%8u: \t%llx\t%llx\t%llx\t%llx.\n", 1 << i, bins[i].aligned, bins[i].unaligned_src, bins[i].unaligned_dest, bins[i].unaligned_both);
+	fprintf(stderr, "%8u: \t%llu\t%llu\t%llu\t%llu.\n", 1 << i, bins[i].aligned, bins[i].unaligned_src, bins[i].unaligned_dest, bins[i].unaligned_both);
 }
 
 #endif
