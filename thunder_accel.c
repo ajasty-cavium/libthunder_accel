@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <signal.h>
 
 #define HANDLE_BZERO  0
 #define HANDLE_MEMSET 0
@@ -15,7 +16,11 @@
 #define HANDLE_STRCMP 0
 #define HANDLE_STRLEN 0
 #define HANDLE_ISO_CONV 0
-#define HANDLE_MUTEX_LOCK 0
+#define HANDLE_MUTEX_LOCK 1
+
+#ifndef uint64_t
+#define uint64_t unsigned long long
+#endif
 
 void *(*memcpy_c)(void *, const void *, size_t);
 int (*memcmp_c)(const void *, const const void *, size_t);
@@ -34,9 +39,45 @@ int iso_conv_s(const unsigned short*, char*, int);
 
 extern void accel_announce(void);
 
+#ifdef MEMCPY_STATS
+
+#define NBINS 32
+#define MEMCPY_ALIGNMENT 0x3f
+
+struct alignbins {
+    uint64_t aligned, unaligned_src, unaligned_dest, unaligned_both;
+};
+
+struct alignbins bins[NBINS + 1];
+
+void sigusr2(int sig)
+{
+    int i;
+
+    for (i = 0; i <= NBINS; i++)
+	fprintf(stderr, "%8u: \t%llx\t%llx\t%llx\t%llx.\n", 1 << i, bins[i].aligned, bins[i].unaligned_src, bins[i].unaligned_dest, bins[i].unaligned_both);
+}
+
+#endif
+
 #if HANDLE_MEMCPY
 void *memcpy(void *dest, const void *src, size_t len)
 {
+#ifdef MEMCPY_STATS
+    int bin = __builtin_ffsll(len) - 1;
+    if (bin > NBINS) bin = NBINS;
+    if (((uint64_t)dest) & MEMCPY_ALIGNMENT) {
+	if (((uint64_t)src) & MEMCPY_ALIGNMENT) {
+	    __atomic_add_fetch(&bins[bin].unaligned_both, 1, __ATOMIC_RELAXED);
+	} else
+	    __atomic_add_fetch(&bins[bin].unaligned_dest, 1, __ATOMIC_RELAXED);
+    } else {
+    	if (((uint64_t)src) & MEMCPY_ALIGNMENT) {
+	    __atomic_add_fetch(&bins[bin].unaligned_src, 1, __ATOMIC_RELAXED);
+	} else
+	    __atomic_add_fetch(&bins[bin].aligned, 1, __ATOMIC_RELAXED);
+    }
+#endif
     return memcpy_t(dest, src, len);
 }
 #endif
@@ -112,7 +153,22 @@ void run_once()
     if (us != NULL) user_spin = atoi(us);
     real_pthread_mutex_lock = dlsym(RTLD_NEXT, "pthread_mutex_lock");
     fprintf(stderr, "mutex: yield=%i spin=%i.\n", yield_spin, user_spin);
+#ifdef MEMCPY_STATS
+    struct sigaction sa;
+    memset(&sa, 0, sizeof(struct sigaction));
+    sa.sa_handler = sigusr2;
+    sigaction(SIGUSR2, &sa, NULL);
+#endif
+    accel_announce();
 }
+
+#ifdef MEMCPY_STATS
+static void run_exit(void) __attribute__((destructor));
+void run_exit()
+{
+    sigusr2(0);
+}
+#endif
 
 #if 0
 typedef struct __pthread_internal_list
