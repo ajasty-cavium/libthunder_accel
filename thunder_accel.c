@@ -52,10 +52,10 @@ struct alignbins bins[NBINS + 1];
 
 void sigusr2(int sig)
 {
-    int i;
+    unsigned long i;
 
     for (i = 0; i <= NBINS; i++)
-	fprintf(stderr, "%8u: \t%llu\t%llu\t%llu\t%llu.\n", 1 << i, bins[i].aligned, bins[i].unaligned_src, bins[i].unaligned_dest, bins[i].unaligned_both);
+	fprintf(stderr, "%8llu: \t%llu\t%llu\t%llu\t%llu.\n", 1ull << i, bins[i].aligned, bins[i].unaligned_src, bins[i].unaligned_dest, bins[i].unaligned_both);
 }
 
 #endif
@@ -64,7 +64,7 @@ void sigusr2(int sig)
 void *memcpy(void *dest, const void *src, size_t len)
 {
 #ifdef MEMCPY_STATS
-    int bin = __builtin_ffsll(len) - 1;
+    int bin = 63 - __builtin_clzl(len);
     if (bin > NBINS) bin = NBINS;
     if (((uint64_t)dest) & MEMCPY_ALIGNMENT) {
 	if (((uint64_t)src) & MEMCPY_ALIGNMENT) {
