@@ -24,6 +24,22 @@
 
 	.global memcpy_s
 
+#define USE_PRFM 0
+
+#define STP 0
+#define STNP 0
+#define STR 1
+#define STN 0
+#define STQ 0
+
+#if USE_PRFM
+#define PRFM(x) prfm pldl1strm,[x]
+#define PRFM2(x,y) prfm pldl1strm,[x,y]
+#else
+#define PRFM(x)
+#define PRFM2(x,y)
+#endif
+
 /*
  * Copy a buffer from src to dest (alignment handled by the hardware)
  *
@@ -54,8 +70,13 @@ C_h	.req	x12
 D_l	.req	x13
 D_h	.req	x14
 
+V_0	.req	v0
+V_1	.req	v1
+V_2	.req	v2
+V_3	.req	v3
+
 memcpy_s:
-	prfm	pldl1strm,[src]
+	PRFM(src)
 	mov	dst, dstin
 	cmp	count, #16
 	/*When memory length is less than 16, the accessed are not aligned.*/
@@ -144,7 +165,7 @@ memcpy_s:
 	ret
 
 .Lcpy_over64:
-	prfm	pldl1strm,[src, 128]
+	PRFM2(src,128)
 	subs	count, count, #128
 	b.ge	.Lcpy_body_large
 	/*
@@ -175,24 +196,42 @@ memcpy_s:
 	b.lt	4f
 	mov	D_h, #PRFM_LINES
 4:
-	prfm	pldl1strm,[D_l, 128]
+	PRFM2(src,64)
+	PRFM2(src,128)
 	add	D_l, D_l, #128
 	sub	D_h, D_h, #1
 	cbnz	D_h, 4b
 	/* pre-get 64 bytes data. */
+#if STP
 	ldp	A_l, A_h, [src],#16
 	ldp	B_l, B_h, [src],#16
 	ldp	C_l, C_h, [src],#16
 	ldp	D_l, D_h, [src],#16
+#elif STNP
+	ldnp	A_l, A_h, [src]
+	ldnp	B_l, B_h, [src, #16]
+	ldnp	C_l, C_h, [src, #32]
+	ldnp	D_l, D_h, [src, #48]
+	add	src, src, #64
+
+#elif STN
+	ld1	{ V0.16b, V1.16b, V2.16b, V3.16b }, [src], #64
+#elif STQ
+	ldp	q0, q1, [src], #32
+	ldp	q2, q3, [src], #32
+#endif
 1:
 	/*
 	* interlace the load of next 64 bytes data block with store of the last
 	* loaded 64 bytes data.
 	*/
 	tbz	src, #6, 2f
-	prfm 	pldl1strm,[src,PRFM_STRIDE]
+	PRFM2(src,PRFM_STRIDE-64)
+	PRFM2(src,PRFM_STRIDE)
 2:
 
+
+#if STP
 	stp	A_l, A_h, [dst],#16
 	ldp	A_l, A_h, [src],#16
 	stp	B_l, B_h, [dst],#16
@@ -201,12 +240,61 @@ memcpy_s:
 	ldp	C_l, C_h, [src],#16
 	stp	D_l, D_h, [dst],#16
 	ldp	D_l, D_h, [src],#16
+#elif STNP
+	stnp	A_l, A_h, [dst]
+	ldnp	A_l, A_h, [src]
+	stnp	B_l, B_h, [dst, #16]
+	ldnp	B_l, B_h, [src, #16]
+	stnp	C_l, C_h, [dst, #32]
+	ldnp	C_l, C_h, [src, #32]
+	stnp	D_l, D_h, [dst, #48]
+	ldnp	D_l, D_h, [src, #48]
+
+	add	dst, dst, #64
+	add	src, src, #64
+#elif STN
+	st1	{ V0.16b, V1.16b, V2.16b, V3.16b }, [dst], #64
+	ld1	{ V0.16b, V1.16b, V2.16b, V3.16b }, [src], #64
+#elif STQ
+	stp	q0, q1, [dst], #32
+	ldp	q0, q1, [src], #32
+	stp	q2, q3, [dst], #32
+	ldp	q2, q3, [src], #32
+#elif STR
+	str	A_l, [dst], #8
+	str	A_h, [dst], #8
+	ldp	A_l, A_h, [src],#16
+	str	B_l, [dst], #8
+	str	B_h, [dst], #8
+	ldp	B_l, B_h, [src],#16
+	str	C_l, [dst], #8
+	str	C_h, [dst], #8
+	ldp	C_l, C_h, [src],#16
+	str	D_l, [dst], #8
+	str	D_h, [dst], #8
+	ldp	D_l, D_h, [src],#16
+#endif
 	subs	count, count, #64
 	b.ge	1b
+
+#if STP
 	stp	A_l, A_h, [dst],#16
 	stp	B_l, B_h, [dst],#16
 	stp	C_l, C_h, [dst],#16
 	stp	D_l, D_h, [dst],#16
+#elif STNP
+	stnp	A_l, A_h, [dst]
+	stnp	B_l, B_h, [dst, #16]
+	stnp	C_l, C_h, [dst, #32]
+	stnp	D_l, D_h, [dst, #48]
+
+	add	dst, dst, #64
+#elif STN
+	st1	{ V0.16b, V1.16b, V2.16b, V3.16b }, [dst], #64
+#elif STQ
+	stp	q0, q1, [dst], #32
+	stp	q2, q3, [dst], #32
+#endif
 
 	tst	count, #0x3f
 	b.ne	.Ltail63

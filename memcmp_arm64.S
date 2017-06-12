@@ -75,6 +75,8 @@ memcmp_s:
 	.p2align 7
 L(prefetch):
 	prfm	pldl1strm, [src1, 384]
+	prfm	pldl1strm, [src1, 384 + 64]
+	prfm	pldl1strm, [src2, 384 + 64]
 	prfm	pldl1strm, [src2, 384]
 	b 	L(no_prefetch)
 

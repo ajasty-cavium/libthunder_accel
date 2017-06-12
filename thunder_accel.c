@@ -7,10 +7,10 @@
 #include <string.h>
 #include <dlfcn.h>
 
-#define HANDLE_BZERO  0
-#define HANDLE_MEMSET 0
+#define HANDLE_BZERO  1
+#define HANDLE_MEMSET 1
 #define HANDLE_MEMCPY 1
-#define HANDLE_MEMCMP 0
+#define HANDLE_MEMCMP 1
 #define HANDLE_STRCPY 0
 #define HANDLE_STRCMP 0
 #define HANDLE_STRLEN 0
@@ -97,7 +97,7 @@ int iso_conv(const unsigned short *c, char *d, int l)
 #define MAX_YIELD_SPIN 10
 
 int (*real_pthread_mutex_lock)(pthread_mutex_t*);
-int yield_spin = -1, user_spin = -1;
+int yield_spin = -1, user_spin = -1, use_wfe = 0, use_yield = 0;
 
 static void run_once(void) __attribute__((constructor));
 void run_once()
@@ -107,7 +107,9 @@ void run_once()
     yield_spin = MAX_YIELD_SPIN;
     user_spin = MAX_USER_SPIN;
     if (ys != NULL) yield_spin = atoi(ys);
-    if (us != NULL) user_spin = atoi(ys);
+    if (us != NULL) user_spin = atoi(us);
+    if (getenv("LIBTXL_WFE")) use_wfe = 1;
+    if (getenv("LIBTXL_YIELD")) use_yield = 1;
     real_pthread_mutex_lock = dlsym(RTLD_NEXT, "pthread_mutex_lock");
 }
 
@@ -119,6 +121,8 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 		for (i = 0; i < user_spin; i++) {
 		        if (pthread_mutex_trylock(mutex) == 0)
 				return 0;
+			if (use_yield) asm ("yield\n");
+			if (use_wfe) asm ("wfe\n");
 		}
 		pthread_yield();
 	}

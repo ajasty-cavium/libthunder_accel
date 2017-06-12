@@ -42,9 +42,9 @@ ifeq ($(ARCH),AARCH64)
 endif
 endif
 
-CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -flto -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE) -mno-ldpstp-merge
-CFLAGS=-fPIC -ggdb -Ofast $(CDEFS) -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE) -fshort-wchar -ldl
-LDFLAGS=-shared  -fPIC -ggdb -Ofast -ldl
+CFLAGS=-fPIC -ggdb -O3 $(CDEFS) -flto -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE) -mno-ldpstp-merge
+CFLAGS=-fPIC -ggdb -O3 $(CDEFS) -DPRFM_LINES=$(PRFM_CLINES) -DPRFM_STRIDE=$(PRFM_STRIDE) -fshort-wchar -ldl -fno-builtin-memcpy
+LDFLAGS=-shared  -fPIC -ggdb -O3 -ldl
 
 LIBTHUNDER_OBJS = thunder_accel.o $(ACCEL_O)
 LIBTHUNDER_LOBJS = memcpy_64.lo thunder_accel.lo
@@ -52,14 +52,14 @@ LIBTHUNDER_SRCS = thunder_accel.c $(ACCEL_S)
 
 all: libthunder_accel.so test
 
-test: test.o $(ISO_CONV_O)
-	$(CC) $(CFLAGS) -o $@ $< $(ISO_CONV_O)
+test: test.o $(ISO_CONV_O) $(MEMCPY_O)
+	$(CC) -O0 -ggdb -o $@ $< $(ISO_CONV_O) $(MEMCPY_O)
 
 test.o: test.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) -ggdb -O0 -c $< -o $@
 
 libthunder_accel.so: libthunder_accel.a
-	$(CC) $(LDFLAGS) -o libthunder_accel.so $(LIBTHUNDER_OBJS)
+	$(CC) $(LDFLAGS) -o libthunder_accel.so $(LIBTHUNDER_OBJS) -ldl
 
 libthunder_accel.a: $(LIBTHUNDER_OBJS)
 	$(AR) cru libthunder_accel.a $(LIBTHUNDER_OBJS)

@@ -25,6 +25,7 @@ bzero_s:
 	cmp	x1, x2
 	bls	3f
 	dc	zva, x0
+	prfm	pstl1strm, [x0, 512]
 	add	x0, x0, x2
 	sub	x1, x1, x2
 	b	2b

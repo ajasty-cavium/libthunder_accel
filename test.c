@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#define AARCH64
+
 #define BUFLEN (1<<16)
 #define NRUNS (1<<4)
 #define CACHECLR (1<<26)
@@ -14,11 +16,19 @@
 #define TEST_BZERO 0
 #endif
 #ifndef TEST_MEMSET
-#define TEST_MEMSET 1
+#define TEST_MEMSET 0
 #endif
+
 #ifndef TEST_MEMCPY
 #define TEST_MEMCPY 1
 #endif
+
+#define MEMCPY_ALIGNMENT 8
+
+#ifndef TEST_MEMCPY_S
+#define TEST_MEMCPY_S 1
+#endif
+
 #ifndef TEST_MEMCMP
 #define TEST_MEMCMP 0
 #endif
@@ -78,17 +88,19 @@ int cmpbuf(const char *src, const char *dest)
 void clearcache()
 {
     memset(clrbuf, 0, CACHECLR);
+    asm volatile ("dsb sy");
 }
 
+extern void *memcpy_s(void *, void *, size_t);
 int runtest(int len, int runs, int doprint)
 {
   int i;
   unsigned long long tv;
-  unsigned long long memcpy_total = 0, memcmp_total = 0;
+  unsigned long long memcpy_total = 0ull, memcmp_total = 0;
+  unsigned long long memcpy_s_total = 0ull;
   unsigned long long strcpy_total = 0, strcmp_total = 0;
   unsigned long long strlen_total = 0, iso_conv_total = 0;
   unsigned long long bzero_total = 0, memset_total = 0;
-
 
   for (i = 0; i < runs; i++) {
     clearcache();
@@ -104,11 +116,29 @@ int runtest(int len, int runs, int doprint)
     memset_total += ticks_since(tv);
     clearcache();
 #endif
-#if TEST_MEMCPY
+#if TEST_MEMCPY_S
+    //memset(srcbuf, i % 255, len << 1);
+    asm volatile ("dsb sy\n" "isb"::: "memory");
     tv = get_ticks();
-    memcpy(srcbuf, destbuf, len);
-    memcpy_total += ticks_since(tv);
+    asm volatile ("" ::: "memory");
+    memcpy_s(srcbuf, destbuf + MEMCPY_ALIGNMENT, len);
+    asm volatile ("" ::: "memory");
+    memcpy_s_total += ticks_since(tv);
+    asm volatile ("" ::: "memory");
+    //printf("memcpy=%llx %llx\n", tv, memcpy_total);
+#endif
     clearcache();
+#if TEST_MEMCPY
+    //memset(srcbuf, i % 255, len << 1);
+    asm volatile ("dsb sy\n" "isb"::: "memory");
+    tv = get_ticks();
+    asm volatile ("" ::: "memory");
+    memcpy(srcbuf, destbuf + MEMCPY_ALIGNMENT, len);
+    asm volatile ("" ::: "memory");
+    memcpy_total += ticks_since(tv);
+    //printf("memcpy=%llx %llx\n", tv, memcpy_total);
+    asm volatile ("" ::: "memory");
+    //clearcache();
 #endif
 
 #if TEST_MEMCMP
@@ -160,9 +190,10 @@ int runtest(int len, int runs, int doprint)
 	iso_conv_total += ticks_since(tv);
 	//printf("iso_conv = %i.\n", c);
     }
+#if 0
     {
 	int c = 33;
-	memset(destbuf, 0, 66);
+	memset(destbuf, i + 1, 66);
 	//c = iso_conv_s((const unsigned short*)srcbuf, (char*)destbuf, c);
 	//c = swprintf((unsigned short*)srcbuf, "%s", L"aaaaaaaabbbbbbbbccccccccdddddddd.");
 	wcscpy(srcbuf, L"aaaaaaaabbbbbbbbccccccccdddddddd.");
@@ -171,6 +202,7 @@ int runtest(int len, int runs, int doprint)
 	printf("iso_conv = %i %s.\n", c, destbuf);
 	write(1, destbuf, c);
     }
+#endif
 
 #endif
     
@@ -187,6 +219,9 @@ int runtest(int len, int runs, int doprint)
 #endif
 #if TEST_MEMCPY
   printf("\tmemcpy:\t%llu\n", memcpy_total / runs);
+#endif
+#if TEST_MEMCPY_S
+  printf("\tmemcpy_s:\t%llu\n", memcpy_s_total / runs);
 #endif
 #if TEST_MEMCMP
   printf("\tmemcmp:\t%llu\n", memcmp_total / runs);
@@ -217,7 +252,7 @@ int main(int argc, void **argv)
   destbuf = malloc(v);
   clrbuf = malloc(CACHECLR);
 
-  runtest(1, 1, 0);
+  runtest(v, 1, 0);
 
   return runtest(v, r, 1);
 }
