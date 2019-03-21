@@ -16,7 +16,7 @@
 #define HANDLE_STRCMP 0
 #define HANDLE_STRLEN 0
 #define HANDLE_ISO_CONV 0
-#define HANDLE_MUTEX_LOCK 1
+#define HANDLE_MUTEX_LOCK 0
 
 #ifndef uint64_t
 #define uint64_t unsigned long long
@@ -78,7 +78,7 @@ void *memcpy(void *dest, const void *src, size_t len)
 	    __atomic_add_fetch(&bins[bin].aligned, 1, __ATOMIC_RELAXED);
     }
 #endif
-    return memcpy_t(dest, src, len);
+    return memcpy_s(dest, src, len);
 }
 #endif
 

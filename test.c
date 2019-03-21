@@ -206,7 +206,7 @@ int runtest(int len, int runs, int doprint)
   printf("\tmemset:\t%llu\n", memset_total / runs);
 #endif
 #if TEST_MEMCPY
-  fprintf(stderr, "\tmemcpy:\t%llu\n", memcpy_total / runs);
+  fprintf(stdout, "\tmemcpy:\t%llu\n", memcpy_total / runs);
 #endif
 #if TEST_MEMCMP
   printf("\tmemcmp:\t%llu\n", memcmp_total / runs);

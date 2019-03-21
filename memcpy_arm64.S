@@ -191,8 +191,8 @@ memcpy_s:
 	*/
 	tbz	src, #6, 2f
 	prfm 	pldl1strm,[src,PRFM_STRIDE]
+#if 0
 2:
-
 	stp	A_l, A_h, [dst],#16
 	ldp	A_l, A_h, [src],#16
 	stp	B_l, B_h, [dst],#16
@@ -207,6 +207,31 @@ memcpy_s:
 	stp	B_l, B_h, [dst],#16
 	stp	C_l, C_h, [dst],#16
 	stp	D_l, D_h, [dst],#16
+#else
+2:
+	str	A_l, [dst],#8
+	str	A_h, [dst],#8
+	ldp	A_l, A_h, [src],#16
+	str	B_l, [dst],#8
+	str	B_h, [dst],#8
+	ldp	B_l, B_h, [src],#16
+	str	C_l, [dst],#8
+	str	C_h, [dst],#8
+	ldp	C_l, C_h, [src],#16
+	str	D_l, [dst],#8
+	str	D_h, [dst],#8
+	ldp	D_l, D_h, [src],#16
+	subs	count, count, #64
+	b.ge	1b
+	str	A_l, [dst],#8
+	str	A_h, [dst],#8
+	str	B_l, [dst],#8
+	str	B_h, [dst],#8
+	str	C_l, [dst],#8
+	str	C_h, [dst],#8
+	str	D_l, [dst],#8
+	str	D_h, [dst],#8
+#endif
 
 	tst	count, #0x3f
 	b.ne	.Ltail63
